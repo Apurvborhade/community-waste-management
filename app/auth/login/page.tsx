@@ -1,8 +1,22 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import { Leaf } from "lucide-react"
 import { LoginForm } from "@/components/login-form"
+import { createClient } from "@/lib/supabase/server"
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // If the user is already authenticated, don't show the sign-in form again
+  const cookieStore = await cookies()
+  const supabase = await createClient(cookieStore)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    redirect("/reports")
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/5 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md space-y-8">

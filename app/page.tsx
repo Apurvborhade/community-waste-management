@@ -1,8 +1,22 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import { Button } from "@/components/ui/button"
 import { Leaf, MapPin, CheckCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // If the user is already authenticated, skip the landing/sign-in UI
+  const cookieStore = await cookies()
+  const supabase = await createClient(cookieStore)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    redirect("/reports")
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}

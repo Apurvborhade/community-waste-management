@@ -32,9 +32,17 @@ export function LoginForm() {
       })
 
       if (error) {
+        const message = error.message || "Unable to sign in. Please try again."
+
+        // If the user hasn't confirmed their email yet, show a specific prompt
+        const isUnverified =
+          message.toLowerCase().includes("confirm") || message.toLowerCase().includes("not confirmed")
+
         toast({
-          title: "Login Failed",
-          description: error.message,
+          title: isUnverified ? "Please Verify Your Email" : "Login Failed",
+          description: isUnverified
+            ? "You need to confirm your email address before signing in. Please check your inbox for the verification link."
+            : message,
           variant: "destructive",
         })
       } else {

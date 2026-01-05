@@ -1,9 +1,24 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import { CheckCircle, Leaf } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { createClient } from "@/lib/supabase/server"
 
-export default function SignUpSuccessPage() {
+export default async function SignUpSuccessPage() {
+  // If the user lands here via the email confirmation link, they will already be authenticated.
+  // In that case, skip this page and send them straight to the app.
+  const cookieStore = await cookies()
+  const supabase = await createClient(cookieStore)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    redirect("/reports")
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/5 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md space-y-8">
@@ -25,6 +40,7 @@ export default function SignUpSuccessPage() {
             <div className="text-center text-muted-foreground space-y-2">
               <p>We've sent a confirmation email to your email address.</p>
               <p>Please check your inbox and click the confirmation link to activate your account.</p>
+              <p>After confirming, you'll be brought back here and automatically taken into the app.</p>
             </div>
 
             <div className="space-y-3">

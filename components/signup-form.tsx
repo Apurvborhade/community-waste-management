@@ -52,11 +52,40 @@ export function SignUpForm() {
           variant: "destructive",
         })
       } else if (data.user) {
+        // Account created successfully. Try to sign the user in immediately.
         toast({
           title: "Account Created!",
-          description: "Please check your email to confirm your account.",
+          description: "We’ve sent a verification email. Signing you in now...",
         })
-        router.push("/auth/sign-up-success")
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (signInError) {
+          const message = signInError.message || "Unable to sign in. Please try again."
+          const isUnverified =
+            message.toLowerCase().includes("confirm") ||
+            message.toLowerCase().includes("not confirmed") ||
+            message.toLowerCase().includes("verify")
+
+          toast({
+            title: isUnverified ? "Please Verify Your Email" : "Sign In Failed",
+            description: isUnverified
+              ? "Your account was created, but you must confirm your email before you can sign in. Please check your inbox."
+              : message,
+            variant: "destructive",
+          })
+
+          // If email confirmation is required, keep directing them to the verification flow page.
+          if (isUnverified) {
+            router.push("/auth/sign-up-success")
+          }
+        } else {
+          // Successfully signed in right after sign up.
+          router.push("/reports")
+        }
       }
     } catch (error) {
       toast({
