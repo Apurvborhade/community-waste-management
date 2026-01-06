@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Empty } from "@/components/ui/empty"
-import { MapPin, Calendar, User, CalendarDays, Trophy, ChevronLeft, ChevronRight } from "lucide-react"
+import { MapPin, Calendar, User, CalendarDays, Trophy, ChevronLeft, ChevronRight, Leaf } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCoordinates } from "@/lib/utils/geolocation"
 
@@ -151,6 +151,29 @@ export function ReportsList() {
     }
 
     fetchReports()
+    
+    // Set up real-time subscription for report updates
+    const supabase = createClient()
+    const channel = supabase
+      .channel('waste_reports_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'waste_reports'
+        },
+        (payload) => {
+          console.log('Report updated:', payload)
+          // Refetch reports when any change occurs
+          fetchReports()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [filter])
 
   useEffect(() => {
@@ -214,7 +237,9 @@ export function ReportsList() {
           ].map((tab) => (
             <button
               key={tab.value}
-              ref={(el) => (tabRefs.current[tab.value] = el)}
+              ref={(el) => {
+                tabRefs.current[tab.value] = el
+              }}
               onClick={() => setFilter(tab.value as typeof filter)}
               onMouseEnter={() => setHoveredTab(tab.value)}
               onMouseLeave={() => setHoveredTab(null)}
@@ -231,7 +256,175 @@ export function ReportsList() {
       </div>
 
       <div className="space-y-4">
-          {filter === "rank" ? (
+          {filter === "events" ? (
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-6 h-6" />
+                    <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full">Government Initiative</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/90 rounded-full p-2 flex items-center gap-2 px-3">
+                      <Leaf className="w-5 h-5 text-green-600" />
+                      <span className="text-xs font-semibold text-green-700">Ministry of Environment</span>
+                    </div>
+                    <div className="bg-white/90 rounded-full p-2 flex items-center gap-2 px-3">
+                      <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z"/>
+                      </svg>
+                      <span className="text-xs font-semibold text-orange-700">Swachh Bharat</span>
+                    </div>
+                  </div>
+                </div>
+                <h2 className="text-3xl font-bold mb-2">Green Champions Awards 2026</h2>
+                <p className="text-green-50">Recognizing outstanding environmental contributors</p>
+              </div>
+              <CardContent className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold mb-3">About the Event</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    The Ministry of Environment & Climate Change is proud to announce the Green Champions Awards 2026, 
+                    a national initiative to recognize and reward citizens who have made exceptional contributions to 
+                    environmental conservation through our Community Waste Management platform.
+                  </p>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="text-xl font-semibold mb-4">Awards & Recognition</h3>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300 p-4 rounded-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-3">
+                        <Trophy className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-purple-900 mb-2">Platinum Tier</h4>
+                      <p className="text-sm text-purple-800 mb-3">150+ Contributions</p>
+                      <ul className="text-xs text-purple-700 space-y-1">
+                        <li>• Platinum Trophy & Certificate</li>
+                        <li>• ₹20,000 Cash Prize</li>
+                        <li>• National Media Feature</li>
+                        <li>• VIP Event Access</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 p-4 rounded-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center mb-3">
+                        <Trophy className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-amber-900 mb-2">Gold Tier</h4>
+                      <p className="text-sm text-amber-800 mb-3">100-149 Contributions</p>
+                      <ul className="text-xs text-amber-700 space-y-1">
+                        <li>• Gold Trophy & Certificate</li>
+                        <li>• ₹10,000 Cash Prize</li>
+                        <li>• Regional Recognition</li>
+                        <li>• Event Invitation</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 p-4 rounded-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-slate-400 to-gray-500 rounded-full flex items-center justify-center mb-3">
+                        <Trophy className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-slate-900 mb-2">Silver Tier</h4>
+                      <p className="text-sm text-slate-800 mb-3">50-99 Contributions</p>
+                      <ul className="text-xs text-slate-700 space-y-1">
+                        <li>• Silver Trophy & Certificate</li>
+                        <li>• ₹5,000 Cash Prize</li>
+                        <li>• District Recognition</li>
+                        <li>• Digital Certificate</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4 rounded-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center mb-3">
+                        <Trophy className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-orange-900 mb-2">Bronze Tier</h4>
+                      <p className="text-sm text-orange-800 mb-3">25-49 Contributions</p>
+                      <ul className="text-xs text-orange-700 space-y-1">
+                        <li>• Bronze Trophy & Certificate</li>
+                        <li>• ₹3,000 Cash Prize</li>
+                        <li>• Local Recognition</li>
+                        <li>• Digital Badge</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="text-xl font-semibold mb-4">Event Timeline</h3>
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <div className="w-3 h-3 rounded-full bg-green-600"></div>
+                        </div>
+                        <div className="w-0.5 h-full bg-green-200 mt-2"></div>
+                      </div>
+                      <div className="pb-8">
+                        <p className="font-semibold">Registration Open</p>
+                        <p className="text-sm text-muted-foreground">January 1 - March 31, 2026</p>
+                        <p className="text-xs text-muted-foreground mt-1">Continue reporting waste to qualify for awards</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                        </div>
+                        <div className="w-0.5 h-full bg-blue-200 mt-2"></div>
+                      </div>
+                      <div className="pb-8">
+                        <p className="font-semibold">Evaluation Period</p>
+                        <p className="text-sm text-muted-foreground">April 1 - April 15, 2026</p>
+                        <p className="text-xs text-muted-foreground mt-1">Verification of contributions and winner selection</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                          <div className="w-3 h-3 rounded-full bg-purple-600"></div>
+                        </div>
+                        <div className="w-0.5 h-full bg-purple-200 mt-2"></div>
+                      </div>
+                      <div className="pb-8">
+                        <p className="font-semibold">Winner Announcement</p>
+                        <p className="text-sm text-muted-foreground">April 22, 2026 (Earth Day)</p>
+                        <p className="text-xs text-muted-foreground mt-1">Live announcement on official platforms</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                          <Trophy className="w-5 h-5 text-amber-600" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="font-semibold">Award Ceremony</p>
+                        <p className="text-sm text-muted-foreground">May 5, 2026</p>
+                        <p className="text-xs text-muted-foreground mt-1">Grand ceremony at National Convention Center, New Delhi</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6 bg-green-50 -mx-6 -mb-6 px-6 py-4">
+                  <h3 className="text-lg font-semibold mb-2">How to Participate?</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Simply continue reporting waste in your community. All verified resolved reports between 
+                    January 1 - March 31, 2026 will count towards your contribution score. No separate registration required!
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-green-700">
+                    <Trophy className="w-4 h-4" />
+                    <span className="font-medium">Current leaderboard available in the "Leaderboard" tab</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : filter === "rank" ? (
             rankLeaders.length === 0 ? (
               <Empty
                 heading="No contributions yet"
@@ -239,22 +432,33 @@ export function ReportsList() {
               />
             ) : (
               <div className="grid gap-2">
-                {rankLeaders.map((leader, idx) => (
-                  <Card key={leader.user_id} className="p-2">
-                    <CardContent className="flex items-center justify-between py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-semibold">{idx + 1}</span>
+                {rankLeaders.map((leader, idx) => {
+                  const getCardColor = () => {
+                    if (idx === 0) return "bg-gradient-to-r from-amber-400/30 to-yellow-300/30 border-2 border-amber-500" // Gold
+                    if (idx === 1) return "bg-gradient-to-r from-slate-300/30 to-gray-200/30 border-2 border-slate-400" // Silver
+                    if (idx === 2) return "bg-gradient-to-r from-orange-500/30 to-amber-600/30 border-2 border-orange-600" // Bronze
+                    return ""
+                  }
+                  
+                  return (
+                    <Card key={leader.user_id} className={`p-2 ${getCardColor()}`}>
+                      <CardContent className="flex items-center justify-between py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-sm font-semibold">{idx + 1}</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{leader.email || leader.user_id}</p>
+                            <p className="text-xs text-muted-foreground">Contribution: {leader.count}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">{leader.email || leader.user_id}</p>
-                          <p className="text-xs text-muted-foreground">Resolved: {leader.count}</p>
-                        </div>
-                      </div>
-                      <Trophy className="w-5 h-5 text-primary" />
-                    </CardContent>
-                  </Card>
-                ))}
+                        {idx < 3 && (
+                          <Trophy className="w-6 h-6 text-primary" />
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             )
           ) : reports.length === 0 ? (

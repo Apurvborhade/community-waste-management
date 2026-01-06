@@ -57,12 +57,8 @@ CREATE POLICY "Users can create reports" ON waste_reports
 CREATE POLICY "Users can update their own reports" ON waste_reports
   FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY "Authorities can update any report status" ON waste_reports
-  FOR UPDATE USING (
-    auth.uid() IN (
-      SELECT id FROM profiles WHERE is_authority = TRUE
-    )
-  );
+CREATE POLICY "Anyone can update report status" ON waste_reports
+  FOR UPDATE USING (TRUE);
 
 -- Report reactions RLS policies
 CREATE POLICY "Users can view all reactions" ON report_reactions
