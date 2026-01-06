@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Empty } from "@/components/ui/empty"
-import { MapPin, Calendar, User } from "lucide-react"
+import { MapPin, Calendar, User, CalendarDays } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCoordinates } from "@/lib/utils/geolocation"
 
@@ -16,15 +16,18 @@ type WasteReport = {
   description: string
   latitude: number
   longitude: number
+  location_address: string | null
   status: "open" | "resolved"
   created_at: string
   user_id: string
+  rank: number | null
+  event: string | null
 }
 
 export function ReportsList() {
   const [reports, setReports] = useState<WasteReport[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [filter, setFilter] = useState<"all" | "open" | "resolved">("all")
+  const [filter, setFilter] = useState<"all" | "open" | "resolved" | "rank" | "events">("all")
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -33,8 +36,12 @@ export function ReportsList() {
         const supabase = createClient()
         let query = supabase.from("waste_reports").select("*").order("created_at", { ascending: false })
 
-        if (filter !== "all") {
+        if (filter === "open" || filter === "resolved") {
           query = query.eq("status", filter)
+        } else if (filter === "rank") {
+          query = query.not("rank", "is", null).neq("rank", 0)
+        } else if (filter === "events") {
+          query = query.not("event", "is", null).neq("event", "")
         }
 
         const { data, error } = await query
@@ -42,6 +49,7 @@ export function ReportsList() {
         if (error) {
           console.error("Error fetching reports:", error)
         } else {
+          console.log(`Filter: ${filter}, Results:`, data?.length)
           setReports(data || [])
         }
       } catch (error) {
@@ -75,11 +83,13 @@ export function ReportsList() {
 
   return (
     <div className="space-y-6">
-      <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "open" | "resolved")}>
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "open" | "resolved" | "rank" | "events")}>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="all">All Reports</TabsTrigger>
           <TabsTrigger value="open">Open</TabsTrigger>
           <TabsTrigger value="resolved">Resolved</TabsTrigger>
+          <TabsTrigger value="rank">Rank</TabsTrigger>
+          <TabsTrigger value="events">Events</TabsTrigger>
         </TabsList>
 
         <TabsContent value={filter} className="space-y-4">
@@ -131,7 +141,7 @@ export function ReportsList() {
                           {/* Location */}
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <MapPin className="w-4 h-4 flex-shrink-0" />
-                            <span>{formatCoordinates(report.latitude, report.longitude)}</span>
+                            <span className="line-clamp-1">{report.location_address || formatCoordinates(report.latitude, report.longitude)}</span>
                           </div>
                         </div>
 

@@ -8,12 +8,14 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
 export function LoginForm() {
+  const [userType, setUserType] = useState<"normal" | "collector" | "admin">("normal")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -46,11 +48,22 @@ export function LoginForm() {
           variant: "destructive",
         })
       } else {
+        // Store user type in localStorage
+        localStorage.setItem("userType", userType)
+        
         toast({
           title: "Welcome Back!",
           description: "You've successfully logged in.",
         })
-        router.push("/reports")
+        
+        // Redirect based on user type
+        if (userType === "normal") {
+          router.push("/reports")
+        } else if (userType === "collector") {
+          router.push("/collector")
+        } else if (userType === "admin") {
+          router.push("/admin")
+        }
       }
     } catch (error) {
       toast({
@@ -71,6 +84,19 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="userType">User Type</Label>
+            <Select value={userType} onValueChange={(value) => setUserType(value as "normal" | "collector" | "admin")} disabled={isLoading}>
+              <SelectTrigger id="userType">
+                <SelectValue placeholder="Select user type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="normal">Normal User</SelectItem>
+                <SelectItem value="collector">Garbage Collector</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input

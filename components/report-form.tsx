@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
@@ -29,7 +30,6 @@ export function ReportForm() {
   const supabase = createClient()
   const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
-  // High-accuracy geolocation
   const getCurrentLocation = (): Promise<{ latitude: number; longitude: number }> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -75,11 +75,8 @@ export function ReportForm() {
     try {
       const { latitude: lat, longitude: lon } = await getCurrentLocation()
       
-      // Debug: Log coordinates
       console.log("Raw coordinates:", { latitude: lat, longitude: lon })
-      console.log("Bhopal reference: ~23.2599°N, 77.4126°E")
       
-      // Validate coordinates
       if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
         throw new Error("Invalid coordinates received")
       }
@@ -87,8 +84,6 @@ export function ReportForm() {
       setLatitude(lat)
       setLongitude(lon)
 
-      // Reverse geocode to get human-readable address
-      // OpenStreetMap Nominatim expects: lat, lon (NOT lon, lat)
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`
       console.log("Reverse geocoding URL:", url)
       
@@ -126,8 +121,8 @@ export function ReportForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!description.trim()) {
-      toast({ title: "Missing Description", description: "Please provide a description.", variant: "destructive" })
+    if (!image) {
+      toast({ title: "Missing Image", description: "Please upload an image.", variant: "destructive" })
       return
     }
     if (latitude === null || longitude === null) {
@@ -155,7 +150,7 @@ export function ReportForm() {
         {
           user_id: authData.user.id,
           image_url: imageUrl,
-          description,
+          description: description.trim() || "No description provided",
           latitude,
           longitude,
           location_address: locationAddress,
