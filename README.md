@@ -1,7 +1,5 @@
 # 🌱 Community Waste Management System
 
-A modern, full-stack web application for community-driven waste reporting and management, built with Next.js 14, TypeScript, and Supabase.
-
 ## 📋 Overview
 
 The Community Waste Management System empowers citizens to report waste hotspots in their community while providing garbage collectors with efficient tools for waste collection and route optimization. The platform features real-time updates, leaderboards, government recognition programs, and interactive mapping.
