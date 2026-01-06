@@ -1,7 +1,9 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Leaf, Plus } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Leaf, Plus, User, LogOut, Settings } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { ReportsList } from "@/components/reports-list"
 import { cookies } from "next/headers"
@@ -18,6 +20,13 @@ export default async function ReportsPage() {
   if (!user) {
     redirect("/auth/login")
   }
+
+  // Get user's resolved reports count
+  const { count: resolvedCount } = await supabase
+    .from("waste_reports")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "resolved")
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,7 +45,44 @@ export default async function ReportsPage() {
                 Report Waste
               </Button>
             </Link>
-            <SignOutButton />
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-background text-primary border-2 border-primary">
+                      <User className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">My Account</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground pt-1">
+                      Contributions: {resolvedCount || 0} resolved
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Profile Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <div className="cursor-pointer">
+                    <SignOutButton />
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
