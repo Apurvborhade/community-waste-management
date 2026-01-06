@@ -39,6 +39,10 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
 
 .dark {
   --background: oklch(0.12 0 0);
