@@ -431,34 +431,96 @@ export function ReportsList() {
                 description="No users have resolved reports yet. Check back soon!"
               />
             ) : (
-              <div className="grid gap-2">
-                {rankLeaders.map((leader, idx) => {
-                  const getCardColor = () => {
-                    if (idx === 0) return "bg-gradient-to-r from-amber-400/30 to-yellow-300/30 border-2 border-amber-500" // Gold
-                    if (idx === 1) return "bg-gradient-to-r from-slate-300/30 to-gray-200/30 border-2 border-slate-400" // Silver
-                    if (idx === 2) return "bg-gradient-to-r from-orange-500/30 to-amber-600/30 border-2 border-orange-600" // Bronze
-                    return ""
-                  }
-                  
-                  return (
-                    <Card key={leader.user_id} className={`p-2 ${getCardColor()}`}>
-                      <CardContent className="flex items-center justify-between py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-sm font-semibold">{idx + 1}</span>
+              <div className="space-y-6">
+                {/* Title Section */}
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-foreground mb-1">
+                    Top Contributors
+                  </h2>
+                  <p className="text-sm text-muted-foreground">Ranked by resolved reports</p>
+                </div>
+
+                {/* Leaderboard Table */}
+                <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                  {/* Table Header */}
+                  <div className="bg-gray-50 border-b px-6 py-3 grid grid-cols-12 gap-4 items-center text-sm font-semibold text-gray-600">
+                    <div className="col-span-1">Rank</div>
+                    <div className="col-span-7">Contributor</div>
+                    <div className="col-span-4 text-right">Contributions</div>
+                  </div>
+
+                  {/* Table Rows */}
+                  <div className="divide-y">
+                    {rankLeaders.map((leader, idx) => {
+                      const getRankStyle = () => {
+                        if (idx === 0) return {
+                          bg: "bg-yellow-100/80",
+                          rankColor: "text-yellow-950 bg-yellow-300",
+                          medal: "text-yellow-500",
+                          countColor: "text-yellow-600"
+                        }
+                        if (idx === 1) return {
+                          bg: "bg-slate-50/50",
+                          rankColor: "text-slate-700 bg-slate-100",
+                          medal: "text-slate-600",
+                          countColor: "text-slate-700"
+                        }
+                        if (idx === 2) return {
+                          bg: "bg-orange-50/50",
+                          rankColor: "text-orange-700 bg-orange-100",
+                          medal: "text-orange-600",
+                          countColor: "text-orange-700"
+                        }
+                        return {
+                          bg: "hover:bg-gray-50",
+                          rankColor: "text-gray-600 bg-gray-100",
+                          medal: "text-gray-500",
+                          countColor: "text-gray-900"
+                        }
+                      }
+                      
+                      const style = getRankStyle()
+                      
+                      return (
+                        <div key={leader.user_id} className={`px-6 py-4 grid grid-cols-12 gap-4 items-center transition-colors ${style.bg}`}>
+                          {/* Rank */}
+                          <div className="col-span-1">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${style.rankColor}`}>
+                              {idx + 1}
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium">{leader.email || leader.user_id}</p>
-                            <p className="text-xs text-muted-foreground">Contribution: {leader.count}</p>
+                          
+                          {/* User Info */}
+                          <div className="col-span-7 flex items-center gap-3">
+                            {idx < 3 && (
+                              <Trophy className={`w-5 h-5 flex-shrink-0 ${style.medal}`} />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-foreground truncate">
+                                {leader.email?.split('@')[0] || 'User'}
+                              </p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {leader.email || leader.user_id}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Contribution Count */}
+                          <div className="col-span-4 text-right">
+                            <div className="inline-flex items-center gap-2">
+                              <span className={`text-2xl font-bold ${style.countColor}`}>
+                                {leader.count}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                resolved
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        {idx < 3 && (
-                          <Trophy className="w-6 h-6 text-primary" />
-                        )}
-                      </CardContent>
-                    </Card>
-                  )
-                })}
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
             )
           ) : reports.length === 0 ? (
