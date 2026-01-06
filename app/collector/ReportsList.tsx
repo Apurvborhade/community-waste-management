@@ -1,4 +1,5 @@
 import { MapPin, Calendar, Clock, CheckCircle2, Navigation } from 'lucide-react';
+import Image from 'next/image';
 import type { WasteReport } from "../types/waste";import { useEffect, useState } from 'react';
 
 interface ReportsListProps {
@@ -67,6 +68,17 @@ export function ReportsList({
 
   const toRad = (value: number) => (value * Math.PI) / 180
 
+  // Parse image URLs from JSON string
+  const getImageUrls = (imageUrl: string | null): string[] => {
+    if (!imageUrl) return []
+    try {
+      const parsed = JSON.parse(imageUrl)
+      return Array.isArray(parsed) ? parsed : [imageUrl]
+    } catch {
+      return [imageUrl]
+    }
+  }
+
   // Sort reports by distance if filter is "nearest"
   const sortedReports = filter === "nearest" 
     ? [...reports].sort((a, b) => {
@@ -94,6 +106,31 @@ export function ReportsList({
             key={report.id}
             className="bg-white rounded-2xl p-6 shadow-sm border-2 border-gray-100 hover:border-gray-200 transition-all"
           >
+            {/* Image Gallery */}
+            {(() => {
+              const imageUrls = getImageUrls(report.image_url)
+              return imageUrls.length > 0 && (
+                <div className="mb-4 grid grid-cols-3 gap-2">
+                  {imageUrls.slice(0, 3).map((url, idx) => (
+                    <div key={idx} className="relative h-24 rounded-lg overflow-hidden bg-gray-100">
+                      <Image
+                        src={url}
+                        alt={`Waste report ${idx + 1}`}
+                        fill
+                        className="object-cover"
+                        crossOrigin="anonymous"
+                      />
+                    </div>
+                  ))}
+                  {imageUrls.length > 3 && (
+                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                      +{imageUrls.length - 3} more
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
