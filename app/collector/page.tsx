@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 
-export default function AdminPage() {
+export default function CollectorPage() {
   const router = useRouter()
   const supabase = createClient()
 
@@ -21,9 +21,9 @@ export default function AdminPage() {
         router.push("/auth/login")
       }
 
-      // Check if user type is admin
+      // Check if user type is collector
       const userType = localStorage.getItem("userType")
-      if (userType !== "admin") {
+      if (userType !== "collector") {
         router.push("/reports")
       }
     }
@@ -44,7 +44,7 @@ export default function AdminPage() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Leaf className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-bold">Admin Dashboard</h1>
+            <h1 className="text-xl font-bold">Garbage Collector Dashboard</h1>
           </div>
           <Button variant="ghost" onClick={handleSignOut}>
             <LogOut className="w-4 h-4 mr-2" />
@@ -57,12 +57,12 @@ export default function AdminPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>Welcome, Admin!</CardTitle>
-            <CardDescription>Your admin dashboard is under construction</CardDescription>
+            <CardTitle>Welcome, Garbage Collector!</CardTitle>
+            <CardDescription>Your dashboard is under construction</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              This page will soon display system management tools, user management, and advanced analytics.
+              This page will soon display waste collection routes, assigned reports, and collection statistics.
             </p>
           </CardContent>
         </Card>
