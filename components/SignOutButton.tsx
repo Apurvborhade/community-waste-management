@@ -3,6 +3,7 @@
 import React from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { LogOut } from 'lucide-react'
 
 export default function SignOutButton() {
   const router = useRouter()
@@ -15,15 +16,17 @@ export default function SignOutButton() {
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
+    localStorage.removeItem("userType")
     router.push("/")
   }
 
   return (
     <button
       onClick={handleSignOut}
-      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+      className="flex items-center w-full text-sm"
     >
-      Sign Out
+      <LogOut className="mr-2 h-4 w-4" />
+      <span>Sign Out</span>
     </button>
   )
 }

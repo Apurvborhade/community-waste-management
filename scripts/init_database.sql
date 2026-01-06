@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS waste_reports (
   latitude FLOAT NOT NULL,
   longitude FLOAT NOT NULL,
   location_address TEXT,
-  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'resolved', 'rejected')),
   rank INTEGER,
   event TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
