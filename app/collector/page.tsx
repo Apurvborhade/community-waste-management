@@ -16,6 +16,7 @@ export default function CollectorPage() {
   const [reports, setReports] = useState<WasteReport[]>([])
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [viewingRoute, setViewingRoute] = useState(false)
+  const [filter, setFilter] = useState<"all" | "nearest">("all")
 
   // check auth
   useEffect(() => {
@@ -74,13 +75,13 @@ export default function CollectorPage() {
     .update({ status: "resolved" })
     .eq("id", reportId)
 
-  if (!error) {
-    // update UI locally
-    setReports(prev =>
-      prev.map(r =>
-        r.id === reportId ? { ...r, status: "resolved" } : r
-      )
-    )
+  if (error) {
+    console.error("Error updating report:", error)
+    alert("Failed to mark as collected: " + error.message)
+  } else {
+    console.log("Successfully marked report as resolved")
+    // Remove from open reports list since it's now resolved
+    setReports(prev => prev.filter(r => r.id !== reportId))
   }
 }
 
@@ -106,12 +107,39 @@ export default function CollectorPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* list view */}
         {!viewingRoute && (
-          <ReportsList
-            reports={reports}
-            selectedReportId={selectedReportId}
-            onShowRoute={handleShowRoute}
-            onMarkCollected={handleMarkCollected}
-          />
+          <>
+            {/* Filter Tabs */}
+            <div className="mb-6 flex gap-2">
+              <button
+                onClick={() => setFilter("all")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filter === "all"
+                    ? "bg-[#0F7A20] text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                All Reports
+              </button>
+              <button
+                onClick={() => setFilter("nearest")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filter === "nearest"
+                    ? "bg-[#0F7A20] text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Nearest First
+              </button>
+            </div>
+
+            <ReportsList
+              reports={reports}
+              selectedReportId={selectedReportId}
+              onShowRoute={handleShowRoute}
+              onMarkCollected={handleMarkCollected}
+              filter={filter}
+            />
+          </>
         )}
 
         {/* navigation view */}

@@ -1,12 +1,12 @@
-import { MapPin, Calendar, Clock, CheckCircle2 } from 'lucide-react';
-import type { WasteReport } from "../types/waste";
-
+import { MapPin, Calendar, Clock, CheckCircle2, Navigation } from 'lucide-react';
+import type { WasteReport } from "../types/waste";import { useEffect, useState } from 'react';
 
 interface ReportsListProps {
   reports: WasteReport[];
   selectedReportId: string | null;
   onShowRoute: (reportId: string) => void;
   onMarkCollected: (reportId: string) => void;
+  filter: "all" | "nearest";
 }
 
 export function ReportsList({
@@ -14,21 +14,82 @@ export function ReportsList({
   selectedReportId,
   onShowRoute,
   onMarkCollected,
+  filter,
 }: ReportsListProps) {
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [distances, setDistances] = useState<{ [key: string]: { distance: string; time: string } }>({})
+
+  useEffect(() => {
+    // Get user's current location
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }
+        setUserLocation(location)
+        calculateDistances(location)
+      },
+      (error) => {
+        console.error('Error getting location:', error)
+      }
+    )
+  }, [reports])
+
+  const calculateDistances = async (userLoc: { lat: number; lng: number }) => {
+    const distanceData: { [key: string]: { distance: string; time: string } } = {}
+
+    for (const report of reports) {
+      // Calculate straight-line distance using Haversine formula
+      const R = 6371 // Earth's radius in km
+      const dLat = toRad(report.latitude - userLoc.lat)
+      const dLon = toRad(report.longitude - userLoc.lng)
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(userLoc.lat)) *
+          Math.cos(toRad(report.latitude)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+      const distance = R * c
+
+      // Estimate time (assuming average speed of 30 km/h in city)
+      const timeInMinutes = Math.round((distance / 30) * 60)
+
+      distanceData[report.id] = {
+        distance: distance.toFixed(1) + ' km',
+        time: timeInMinutes + ' min',
+      }
+    }
+
+    setDistances(distanceData)
+  }
+
+  const toRad = (value: number) => (value * Math.PI) / 180
+
+  // Sort reports by distance if filter is "nearest"
+  const sortedReports = filter === "nearest" 
+    ? [...reports].sort((a, b) => {
+        const distA = distances[a.id] ? parseFloat(distances[a.id].distance) : Infinity
+        const distB = distances[b.id] ? parseFloat(distances[b.id].distance) : Infinity
+        return distA - distB
+      })
+    : reports
+
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-        Open Reports ({reports.length})
+        {filter === "nearest" ? "Nearest Reports" : "Open Reports"} ({sortedReports.length})
       </h2>
 
-      {reports.length === 0 ? (
+      {sortedReports.length === 0 ? (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center">
           <CheckCircle2 className="w-12 h-12 text-[#0F7A20] mx-auto mb-3" />
           <p className="text-gray-700 text-lg">All reports cleared!</p>
           <p className="text-gray-500 text-sm mt-1">Great work keeping the city clean.</p>
         </div>
       ) : (
-        reports.map((report) => (
+        sortedReports.map((report) => (
           <div
             key={report.id}
             className="bg-white rounded-2xl p-6 shadow-sm border-2 border-gray-100 hover:border-gray-200 transition-all"
@@ -43,6 +104,18 @@ export function ReportsList({
                   <MapPin className="w-4 h-4" />
                   <span>{report.location}</span>
                 </div>
+                {distances[report.id] && (
+                  <div className="flex items-center gap-3 text-sm mt-2">
+                    <div className="flex items-center gap-1.5 text-blue-600">
+                      <Navigation className="w-4 h-4" />
+                      <span className="font-medium">{distances[report.id].distance}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-blue-600">
+                      <Clock className="w-4 h-4" />
+                      <span className="font-medium">~{distances[report.id].time}</span>
+                    </div>
+                  </div>
+                )}
               </div>
               <span className="px-3 py-1 border-2 border-[#0F7A20] text-[#0F7A20] rounded-full text-xs font-medium">
                 {report.status}
