@@ -17,8 +17,8 @@ import { Upload, X } from "lucide-react"
 
 export function ReportForm() {
   const [description, setDescription] = useState("")
-  const [image, setImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [images, setImages] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [locationAddress, setLocationAddress] = useState<string>("")
@@ -29,6 +29,7 @@ export function ReportForm() {
   const { toast } = useToast()
   const supabase = createClient()
   const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const MAX_IMAGES = 5
 
   const getCurrentLocation = (): Promise<{ latitude: number; longitude: number }> => {
     return new Promise((resolve, reject) => {
@@ -63,11 +64,29 @@ export function ReportForm() {
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setImage(file)
-      setImagePreview(URL.createObjectURL(file))
+    const files = Array.from(e.target.files || [])
+    if (files.length + images.length > MAX_IMAGES) {
+      toast({
+        title: "Too many images",
+        description: `You can only upload up to ${MAX_IMAGES} images.`,
+        variant: "destructive",
+      })
+      return
     }
+    
+    const newImages = [...images, ...files]
+    const newPreviews = [...imagePreviews, ...files.map(f => URL.createObjectURL(f))]
+    
+    setImages(newImages)
+    setImagePreviews(newPreviews)
+  }
+
+  const removeImage = (index: number) => {
+    const newImages = images.filter((_, i) => i !== index)
+    const newPreviews = imagePreviews.filter((_, i) => i !== index)
+    URL.revokeObjectURL(imagePreviews[index])
+    setImages(newImages)
+    setImagePreviews(newPreviews)
   }
 
   const handleGetLocation = async () => {
@@ -121,8 +140,8 @@ export function ReportForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!image) {
-      toast({ title: "Missing Image", description: "Please upload an image.", variant: "destructive" })
+    if (images.length === 0) {
+      toast({ title: "Missing Images", description: "Please upload at least one image.", variant: "destructive" })
       return
     }
     if (latitude === null || longitude === null) {
@@ -137,19 +156,19 @@ export function ReportForm() {
         return
       }
 
-      let imageUrl: string | null = null
-      if (image) {
-        const fileName = `${Date.now()}-${image.name.replace(/\s+/g, "-")}`
+      const imageUrls: string[] = []
+      for (const image of images) {
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${image.name.replace(/\s+/g, "-")}`
         const { error: uploadError } = await supabase.storage.from("waste-images").upload(fileName, image)
         if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
         const { data: publicUrlData } = supabase.storage.from("waste-images").getPublicUrl(fileName)
-        imageUrl = publicUrlData.publicUrl
+        imageUrls.push(publicUrlData.publicUrl)
       }
 
       const { error: insertError } = await supabase.from("waste_reports").insert([
         {
           user_id: authData.user.id,
-          image_url: imageUrl,
+          image_url: JSON.stringify(imageUrls),
           description: description.trim() || "No description provided",
           latitude,
           longitude,
@@ -161,7 +180,8 @@ export function ReportForm() {
 
       toast({ title: "Report Submitted!", description: "Thank you for helping keep our community clean." })
 
-      setDescription(""); setImage(null); setImagePreview(null); setLatitude(null); setLongitude(null); setLocationAddress("")
+      imagePreviews.forEach(preview => URL.revokeObjectURL(preview))
+      setDescription(""); setImages([]); setImagePreviews([]); setLatitude(null); setLongitude(null); setLocationAddress("")
       setTimeout(() => { router.push("/reports") }, 1500)
     } catch (error) {
       toast({ title: "Submission Error", description: error instanceof Error ? error.message : "An unexpected error occurred.", variant: "destructive" })
@@ -181,26 +201,36 @@ export function ReportForm() {
 
           {/* Image Upload */}
           <div className="space-y-2">
-            <Label>Images</Label>
-            <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
-              <input ref={fileInputRef} type="file" accept="image/*" {...(isMobile ? { capture: "environment" } : {})} onChange={handleImageChange} disabled={isSubmitting} className="hidden" />
-              {imagePreview ? (
-                <div className="space-y-4">
-                  <div className="relative w-full h-40">
-                    <Image src={imagePreview || "/placeholder.svg"} alt="Preview" fill className="object-contain" crossOrigin="anonymous" />
+            <Label>Images (Max. {MAX_IMAGES})</Label>
+            <p className="text-sm text-red-500 dark:text-yellow-400 font-normal">Note: Images not be of different locations.</p>
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative aspect-square group">
+                    <Image src={preview} alt={`Preview ${index + 1}`} fill className="object-cover rounded-lg" crossOrigin="anonymous" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setImage(null); setImagePreview(null) }}>
-                    <X className="w-4 h-4 mr-2" /> Remove Image
-                  </Button>
-                </div>
-              ) : (
+                ))}
+              </div>
+            )}
+            {images.length < MAX_IMAGES && (
+              <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                <input ref={fileInputRef} type="file" accept="image/*" multiple {...(isMobile ? { capture: "environment" } : {})} onChange={handleImageChange} disabled={isSubmitting} className="hidden" />
                 <div className="space-y-2">
                   <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                  <p className="font-medium">Click to upload or drag and drop</p>
-                  <p className="text-sm text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
+                  <p className="font-medium">Click to upload images</p>
+                  <p className="text-sm text-muted-foreground">{images.length}/{MAX_IMAGES} images • PNG, JPG, GIF up to 10MB each</p>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Description */}

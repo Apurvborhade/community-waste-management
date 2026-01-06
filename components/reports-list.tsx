@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Empty } from "@/components/ui/empty"
-import { MapPin, Calendar, User, CalendarDays, Trophy } from "lucide-react"
+import { MapPin, Calendar, User, CalendarDays, Trophy, ChevronLeft, ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCoordinates } from "@/lib/utils/geolocation"
 
@@ -32,14 +32,35 @@ export function ReportsList() {
   const [hoveredTab, setHoveredTab] = useState<string | null>(null)
   const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({})
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [userType, setUserType] = useState<string | null>(null)
   type ResolvedLeader = { user_id: string; email: string | null; count: number }
   const [rankLeaders, setRankLeaders] = useState<ResolvedLeader[]>([])
+  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({})
+
+  const getImageUrls = (imageUrl: string | null): string[] => {
+    if (!imageUrl) return []
+    try {
+      const parsed = JSON.parse(imageUrl)
+      return Array.isArray(parsed) ? parsed : [imageUrl]
+    } catch {
+      return [imageUrl]
+    }
+  }
 
   useEffect(() => {
     const fetchReports = async () => {
       setIsLoading(true)
       try {
         const supabase = createClient()
+        
+        // Get current user and user type
+        const { data: { user } } = await supabase.auth.getUser()
+        setCurrentUserId(user?.id || null)
+        
+        const storedUserType = localStorage.getItem("userType")
+        setUserType(storedUserType)
+        
         if (filter === "rank") {
           const { data: resolvedReports, error } = await supabase
             .from("waste_reports")
@@ -77,6 +98,12 @@ export function ReportsList() {
             .select("*")
             .order("created_at", { ascending: false })
 
+          // Normal users see only their own reports, Admin and Garbage collector see all
+          if (storedUserType === "Normal User" && user?.id) {
+            query = query.eq("user_id", user.id)
+          }
+          
+          // Apply status filters (for all user types)
           if (filter === "open" || filter === "resolved" || filter === "rejected") {
             query = query.eq("status", filter)
           } else if (filter === "events") {
@@ -107,7 +134,7 @@ export function ReportsList() {
             
             const reportsWithEmail = (data || []).map((report) => ({
               ...report,
-              user_email: emailsMap.get(report.user_id) || null
+              user_email: emailsMap.get(report.user_id) || null,
             }))
             
             console.log("Reports with email:", reportsWithEmail)
@@ -245,21 +272,64 @@ export function ReportsList() {
                 <Card key={report.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <CardContent className="p-0">
                     <div className="grid md:grid-cols-3 gap-4">
-                      {/* Image */}
-                      <div className="relative h-40 md:h-auto bg-muted overflow-hidden rounded-t-lg md:rounded-l-lg md:rounded-t-none">
-                        {report.image_url ? (
-                          <Image
-                            src={report.image_url || "/placeholder.svg"}
-                            alt="Waste report"
-                            fill
-                            className="object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                            No image
-                          </div>
-                        )}
+                      {/* Image Carousel */}
+                      <div className="relative h-40 md:h-auto bg-muted overflow-hidden rounded-t-lg md:rounded-l-lg md:rounded-t-none group">
+                        {(() => {
+                          const imageUrls = getImageUrls(report.image_url)
+                          return imageUrls.length > 0 ? (
+                            <>
+                              <Image
+                                src={imageUrls[currentImageIndex[report.id] || 0]}
+                                alt="Waste report"
+                                fill
+                                className="object-cover"
+                                crossOrigin="anonymous"
+                              />
+                              {imageUrls.length > 1 && (
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      const current = currentImageIndex[report.id] || 0
+                                      const newIndex = current === 0 ? imageUrls.length - 1 : current - 1
+                                      setCurrentImageIndex({ ...currentImageIndex, [report.id]: newIndex })
+                                    }}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <ChevronLeft className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      const current = currentImageIndex[report.id] || 0
+                                      const newIndex = current === imageUrls.length - 1 ? 0 : current + 1
+                                      setCurrentImageIndex({ ...currentImageIndex, [report.id]: newIndex })
+                                    }}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <ChevronRight className="w-5 h-5" />
+                                  </button>
+                                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                    {imageUrls.map((_, idx) => (
+                                      <div
+                                        key={idx}
+                                        className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                          idx === (currentImageIndex[report.id] || 0)
+                                            ? 'bg-white'
+                                            : 'bg-white/50'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              No image
+                            </div>
+                          )
+                        })()}
                       </div>
 
                       {/* Details */}
@@ -296,7 +366,7 @@ export function ReportsList() {
                           </div>
                           <div className="flex items-center gap-1">
                             <User className="w-4 h-4" />
-                            {report.user_email || "Community Member"}
+                            {report.user_id === currentUserId ? (report.user_email || "You") : "Community Member"}
                           </div>
                         </div>
                       </div>
