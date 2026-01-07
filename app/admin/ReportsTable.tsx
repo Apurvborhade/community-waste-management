@@ -38,29 +38,41 @@ export function ReportsTable({ onViewReport }: ReportsTableProps) {
 
       const { data: profilesData } = await supabase
         .from("profiles")
-        .select("id, email")      
-        .in("id", userIds)        
+        .select("id, email")
+        .in("id", userIds)
 
       const emailMap: Record<string, string> = {}
-      profilesData?.forEach((p) => {
-        emailMap[p.id] = p.email
-      })
+      profilesData?.forEach((p) => (emailMap[p.id] = p.email))
 
-      const mapped = reportsData.map((r) => ({
-        id: r.id,
-        // Removed reportId mapping here
-        user: emailMap[r.user_id] || "Unknown",
-        location: r.location_address || "Unknown",
-        status: r.status === "resolved" ? "Resolved" : "Open",
-        priority: r.rank ? "High" : "Low",
-        dateCreated: new Date(r.created_at).toDateString(),
-        description: r.description,
-        imageUrl: r.image_url || null,
-        coordinates: {
-          lat: r.latitude,
-          lng: r.longitude,
-        },
-      }))
+      const mapped = reportsData.map((r) => {
+        // ---- IMAGE FIX ----
+        let imageUrl: string | null = null
+
+        if (r.image_url) {
+          try {
+            const parsed = JSON.parse(r.image_url)
+            imageUrl = Array.isArray(parsed) ? parsed[0] : parsed
+          } catch {
+            imageUrl = r.image_url
+          }
+        }
+        // -------------------
+
+        return {
+          id: r.id,
+          user: emailMap[r.user_id] || "Unknown",
+          location: r.location_address || "Unknown",
+          status: r.status === "resolved" ? "Resolved" : "Open",
+          priority: r.rank ? "High" : "Low",
+          dateCreated: new Date(r.created_at).toDateString(),
+          description: r.description,
+          imageUrl,
+          coordinates: {
+            lat: r.latitude,
+            lng: r.longitude,
+          },
+        }
+      })
 
       setReports(mapped as WasteReportAdmin[])
       setLoading(false)
@@ -83,7 +95,9 @@ export function ReportsTable({ onViewReport }: ReportsTableProps) {
   }
 
   const filteredReports = reports.filter((report) => {
-    const matchesStatus = statusFilter === "All" || report.status === statusFilter
+    const matchesStatus =
+      statusFilter === "All" || report.status === statusFilter
+
     const matchesLocation =
       locationFilter === "All" || report.location.includes(locationFilter)
 
@@ -98,7 +112,6 @@ export function ReportsTable({ onViewReport }: ReportsTableProps) {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* Header & Filters */}
       <div className="p-6 border-b border-gray-200">
         <h2 className="text-xl font-semibold text-gray-900 mb-6">
           All Waste Reports
@@ -144,7 +157,6 @@ export function ReportsTable({ onViewReport }: ReportsTableProps) {
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200 text-left">
@@ -157,11 +169,13 @@ export function ReportsTable({ onViewReport }: ReportsTableProps) {
               <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {filteredReports.map((report) => (
               <tr key={report.id} className="border-b hover:bg-gray-50">
-                {/* ID Column Removed */}
-                <td className="px-6 py-3 text-sm text-gray-600 font-medium">{report.user}</td>
+                <td className="px-6 py-3 text-sm text-gray-600 font-medium">
+                  {report.user}
+                </td>
 
                 <td className="px-6 py-3 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
@@ -171,16 +185,24 @@ export function ReportsTable({ onViewReport }: ReportsTableProps) {
                 </td>
 
                 <td className="px-6 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    report.status === "Resolved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-                  }`}>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      report.status === "Resolved"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
                     {report.status}
                   </span>
                 </td>
 
-                <td className="px-6 py-3 text-sm text-gray-600">{report.priority}</td>
+                <td className="px-6 py-3 text-sm text-gray-600">
+                  {report.priority}
+                </td>
 
-                <td className="px-6 py-3 text-sm text-gray-600">{report.dateCreated}</td>
+                <td className="px-6 py-3 text-sm text-gray-600">
+                  {report.dateCreated}
+                </td>
 
                 <td className="px-6 py-3 flex gap-2">
                   <button
