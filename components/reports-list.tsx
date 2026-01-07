@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Empty } from "@/components/ui/empty"
-import { MapPin, Calendar, User, CalendarDays, Trophy } from "lucide-react"
+import { MapPin, Calendar, User, CalendarDays, Trophy, ChevronLeft, ChevronRight, Leaf } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatCoordinates } from "@/lib/utils/geolocation"
 
@@ -32,14 +32,35 @@ export function ReportsList() {
   const [hoveredTab, setHoveredTab] = useState<string | null>(null)
   const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({})
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [userType, setUserType] = useState<string | null>(null)
   type ResolvedLeader = { user_id: string; email: string | null; count: number }
   const [rankLeaders, setRankLeaders] = useState<ResolvedLeader[]>([])
+  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({})
+
+  const getImageUrls = (imageUrl: string | null): string[] => {
+    if (!imageUrl) return []
+    try {
+      const parsed = JSON.parse(imageUrl)
+      return Array.isArray(parsed) ? parsed : [imageUrl]
+    } catch {
+      return [imageUrl]
+    }
+  }
 
   useEffect(() => {
     const fetchReports = async () => {
       setIsLoading(true)
       try {
         const supabase = createClient()
+        
+        // Get current user and user type
+        const { data: { user } } = await supabase.auth.getUser()
+        setCurrentUserId(user?.id || null)
+        
+        const storedUserType = localStorage.getItem("userType")
+        setUserType(storedUserType)
+        
         if (filter === "rank") {
           const { data: resolvedReports, error } = await supabase
             .from("waste_reports")
@@ -77,6 +98,12 @@ export function ReportsList() {
             .select("*")
             .order("created_at", { ascending: false })
 
+          // Normal users see only their own reports, Admin and Garbage collector see all
+          if (storedUserType === "Normal User" && user?.id) {
+            query = query.eq("user_id", user.id)
+          }
+          
+          // Apply status filters (for all user types)
           if (filter === "open" || filter === "resolved" || filter === "rejected") {
             query = query.eq("status", filter)
           } else if (filter === "events") {
@@ -107,7 +134,7 @@ export function ReportsList() {
             
             const reportsWithEmail = (data || []).map((report) => ({
               ...report,
-              user_email: emailsMap.get(report.user_id) || null
+              user_email: emailsMap.get(report.user_id) || null,
             }))
             
             console.log("Reports with email:", reportsWithEmail)
@@ -124,6 +151,29 @@ export function ReportsList() {
     }
 
     fetchReports()
+    
+    // Set up real-time subscription for report updates
+    const supabase = createClient()
+    const channel = supabase
+      .channel('waste_reports_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'waste_reports'
+        },
+        (payload) => {
+          console.log('Report updated:', payload)
+          // Refetch reports when any change occurs
+          fetchReports()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [filter])
 
   useEffect(() => {
@@ -187,7 +237,9 @@ export function ReportsList() {
           ].map((tab) => (
             <button
               key={tab.value}
-              ref={(el) => (tabRefs.current[tab.value] = el)}
+              ref={(el) => {
+                tabRefs.current[tab.value] = el
+              }}
               onClick={() => setFilter(tab.value as typeof filter)}
               onMouseEnter={() => setHoveredTab(tab.value)}
               onMouseLeave={() => setHoveredTab(null)}
@@ -204,30 +256,271 @@ export function ReportsList() {
       </div>
 
       <div className="space-y-4">
-          {filter === "rank" ? (
+          {filter === "events" ? (
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-6 h-6" />
+                    <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full">Government Initiative</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/90 rounded-full p-2 flex items-center gap-2 px-3">
+                      <Leaf className="w-5 h-5 text-green-600" />
+                      <span className="text-xs font-semibold text-green-700">Ministry of Environment</span>
+                    </div>
+                    <div className="bg-white/90 rounded-full p-2 flex items-center gap-2 px-3">
+                      <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z"/>
+                      </svg>
+                      <span className="text-xs font-semibold text-orange-700">Swachh Bharat</span>
+                    </div>
+                  </div>
+                </div>
+                <h2 className="text-3xl font-bold mb-2">Green Champions Awards 2026</h2>
+                <p className="text-green-50">Recognizing outstanding environmental contributors</p>
+              </div>
+              <CardContent className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold mb-3">About the Event</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    The Ministry of Environment & Climate Change is proud to announce the Green Champions Awards 2026, 
+                    a national initiative to recognize and reward citizens who have made exceptional contributions to 
+                    environmental conservation through our Community Waste Management platform.
+                  </p>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="text-xl font-semibold mb-4">Awards & Recognition</h3>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300 p-4 rounded-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-3">
+                        <Trophy className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-purple-900 mb-2">Platinum Tier</h4>
+                      <p className="text-sm text-purple-800 mb-3">150+ Contributions</p>
+                      <ul className="text-xs text-purple-700 space-y-1">
+                        <li>• Platinum Trophy & Certificate</li>
+                        <li>• ₹20,000 Cash Prize</li>
+                        <li>• National Media Feature</li>
+                        <li>• VIP Event Access</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 p-4 rounded-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center mb-3">
+                        <Trophy className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-amber-900 mb-2">Gold Tier</h4>
+                      <p className="text-sm text-amber-800 mb-3">100-149 Contributions</p>
+                      <ul className="text-xs text-amber-700 space-y-1">
+                        <li>• Gold Trophy & Certificate</li>
+                        <li>• ₹10,000 Cash Prize</li>
+                        <li>• Regional Recognition</li>
+                        <li>• Event Invitation</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 p-4 rounded-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-slate-400 to-gray-500 rounded-full flex items-center justify-center mb-3">
+                        <Trophy className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-slate-900 mb-2">Silver Tier</h4>
+                      <p className="text-sm text-slate-800 mb-3">50-99 Contributions</p>
+                      <ul className="text-xs text-slate-700 space-y-1">
+                        <li>• Silver Trophy & Certificate</li>
+                        <li>• ₹5,000 Cash Prize</li>
+                        <li>• District Recognition</li>
+                        <li>• Digital Certificate</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4 rounded-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center mb-3">
+                        <Trophy className="w-6 h-6 text-white" />
+                      </div>
+                      <h4 className="font-semibold text-orange-900 mb-2">Bronze Tier</h4>
+                      <p className="text-sm text-orange-800 mb-3">25-49 Contributions</p>
+                      <ul className="text-xs text-orange-700 space-y-1">
+                        <li>• Bronze Trophy & Certificate</li>
+                        <li>• ₹3,000 Cash Prize</li>
+                        <li>• Local Recognition</li>
+                        <li>• Digital Badge</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="text-xl font-semibold mb-4">Event Timeline</h3>
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <div className="w-3 h-3 rounded-full bg-green-600"></div>
+                        </div>
+                        <div className="w-0.5 h-full bg-green-200 mt-2"></div>
+                      </div>
+                      <div className="pb-8">
+                        <p className="font-semibold">Registration Open</p>
+                        <p className="text-sm text-muted-foreground">January 1 - March 31, 2026</p>
+                        <p className="text-xs text-muted-foreground mt-1">Continue reporting waste to qualify for awards</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                        </div>
+                        <div className="w-0.5 h-full bg-blue-200 mt-2"></div>
+                      </div>
+                      <div className="pb-8">
+                        <p className="font-semibold">Evaluation Period</p>
+                        <p className="text-sm text-muted-foreground">April 1 - April 15, 2026</p>
+                        <p className="text-xs text-muted-foreground mt-1">Verification of contributions and winner selection</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                          <div className="w-3 h-3 rounded-full bg-purple-600"></div>
+                        </div>
+                        <div className="w-0.5 h-full bg-purple-200 mt-2"></div>
+                      </div>
+                      <div className="pb-8">
+                        <p className="font-semibold">Winner Announcement</p>
+                        <p className="text-sm text-muted-foreground">April 22, 2026 (Earth Day)</p>
+                        <p className="text-xs text-muted-foreground mt-1">Live announcement on official platforms</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                          <Trophy className="w-5 h-5 text-amber-600" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="font-semibold">Award Ceremony</p>
+                        <p className="text-sm text-muted-foreground">May 5, 2026</p>
+                        <p className="text-xs text-muted-foreground mt-1">Grand ceremony at National Convention Center, New Delhi</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6 bg-green-50 -mx-6 -mb-6 px-6 py-4">
+                  <h3 className="text-lg font-semibold mb-2">How to Participate?</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Simply continue reporting waste in your community. All verified resolved reports between 
+                    January 1 - March 31, 2026 will count towards your contribution score. No separate registration required!
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-green-700">
+                    <Trophy className="w-4 h-4" />
+                    <span className="font-medium">Current leaderboard available in the "Leaderboard" tab</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : filter === "rank" ? (
             rankLeaders.length === 0 ? (
               <Empty
                 heading="No contributions yet"
                 description="No users have resolved reports yet. Check back soon!"
               />
             ) : (
-              <div className="grid gap-2">
-                {rankLeaders.map((leader, idx) => (
-                  <Card key={leader.user_id} className="p-2">
-                    <CardContent className="flex items-center justify-between py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-semibold">{idx + 1}</span>
+              <div className="space-y-6">
+                {/* Title Section */}
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-foreground mb-1">
+                    Top Contributors
+                  </h2>
+                  <p className="text-sm text-muted-foreground">Ranked by resolved reports</p>
+                </div>
+
+                {/* Leaderboard Table */}
+                <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                  {/* Table Header */}
+                  <div className="bg-gray-50 border-b px-6 py-3 grid grid-cols-12 gap-4 items-center text-sm font-semibold text-gray-600">
+                    <div className="col-span-1">Rank</div>
+                    <div className="col-span-7">Contributor</div>
+                    <div className="col-span-4 text-right">Contributions</div>
+                  </div>
+
+                  {/* Table Rows */}
+                  <div className="divide-y">
+                    {rankLeaders.map((leader, idx) => {
+                      const getRankStyle = () => {
+                        if (idx === 0) return {
+                          bg: "bg-yellow-100/80",
+                          rankColor: "text-yellow-950 bg-yellow-300",
+                          medal: "text-yellow-500",
+                          countColor: "text-yellow-600"
+                        }
+                        if (idx === 1) return {
+                          bg: "bg-slate-50/50",
+                          rankColor: "text-slate-700 bg-slate-100",
+                          medal: "text-slate-600",
+                          countColor: "text-slate-700"
+                        }
+                        if (idx === 2) return {
+                          bg: "bg-orange-50/50",
+                          rankColor: "text-orange-700 bg-orange-100",
+                          medal: "text-orange-600",
+                          countColor: "text-orange-700"
+                        }
+                        return {
+                          bg: "hover:bg-gray-50",
+                          rankColor: "text-gray-600 bg-gray-100",
+                          medal: "text-gray-500",
+                          countColor: "text-gray-900"
+                        }
+                      }
+                      
+                      const style = getRankStyle()
+                      
+                      return (
+                        <div key={leader.user_id} className={`px-6 py-4 grid grid-cols-12 gap-4 items-center transition-colors ${style.bg}`}>
+                          {/* Rank */}
+                          <div className="col-span-1">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${style.rankColor}`}>
+                              {idx + 1}
+                            </div>
+                          </div>
+                          
+                          {/* User Info */}
+                          <div className="col-span-7 flex items-center gap-3">
+                            {idx < 3 && (
+                              <Trophy className={`w-5 h-5 flex-shrink-0 ${style.medal}`} />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-foreground truncate">
+                                {leader.email?.split('@')[0] || 'User'}
+                              </p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {leader.email || leader.user_id}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Contribution Count */}
+                          <div className="col-span-4 text-right">
+                            <div className="inline-flex items-center gap-2">
+                              <span className={`text-2xl font-bold ${style.countColor}`}>
+                                {leader.count}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                resolved
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">{leader.email || leader.user_id}</p>
-                          <p className="text-xs text-muted-foreground">Resolved: {leader.count}</p>
-                        </div>
-                      </div>
-                      <Trophy className="w-5 h-5 text-primary" />
-                    </CardContent>
-                  </Card>
-                ))}
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
             )
           ) : reports.length === 0 ? (
@@ -245,21 +538,64 @@ export function ReportsList() {
                 <Card key={report.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <CardContent className="p-0">
                     <div className="grid md:grid-cols-3 gap-4">
-                      {/* Image */}
-                      <div className="relative h-40 md:h-auto bg-muted overflow-hidden rounded-t-lg md:rounded-l-lg md:rounded-t-none">
-                        {report.image_url ? (
-                          <Image
-                            src={report.image_url || "/placeholder.svg"}
-                            alt="Waste report"
-                            fill
-                            className="object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                            No image
-                          </div>
-                        )}
+                      {/* Image Carousel */}
+                      <div className="relative h-40 md:h-auto bg-muted overflow-hidden rounded-t-lg md:rounded-l-lg md:rounded-t-none group">
+                        {(() => {
+                          const imageUrls = getImageUrls(report.image_url)
+                          return imageUrls.length > 0 ? (
+                            <>
+                              <Image
+                                src={imageUrls[currentImageIndex[report.id] || 0]}
+                                alt="Waste report"
+                                fill
+                                className="object-cover"
+                                crossOrigin="anonymous"
+                              />
+                              {imageUrls.length > 1 && (
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      const current = currentImageIndex[report.id] || 0
+                                      const newIndex = current === 0 ? imageUrls.length - 1 : current - 1
+                                      setCurrentImageIndex({ ...currentImageIndex, [report.id]: newIndex })
+                                    }}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <ChevronLeft className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      const current = currentImageIndex[report.id] || 0
+                                      const newIndex = current === imageUrls.length - 1 ? 0 : current + 1
+                                      setCurrentImageIndex({ ...currentImageIndex, [report.id]: newIndex })
+                                    }}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <ChevronRight className="w-5 h-5" />
+                                  </button>
+                                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                    {imageUrls.map((_, idx) => (
+                                      <div
+                                        key={idx}
+                                        className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                          idx === (currentImageIndex[report.id] || 0)
+                                            ? 'bg-white'
+                                            : 'bg-white/50'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              No image
+                            </div>
+                          )
+                        })()}
                       </div>
 
                       {/* Details */}
@@ -296,7 +632,7 @@ export function ReportsList() {
                           </div>
                           <div className="flex items-center gap-1">
                             <User className="w-4 h-4" />
-                            {report.user_email || "Community Member"}
+                            {report.user_id === currentUserId ? (report.user_email || "You") : "Community Member"}
                           </div>
                         </div>
                       </div>

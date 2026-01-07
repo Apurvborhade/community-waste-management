@@ -3,7 +3,7 @@
 import { MapPin, Navigation as NavigationIcon, Clock, ArrowLeft, CheckCircle2, Trash2 } from "lucide-react"
 import type { WasteReport } from "../types/waste"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import polyline from "polyline"
 
 interface NavigationViewProps {
@@ -13,7 +13,6 @@ interface NavigationViewProps {
 }
 
 export function NavigationView({ report, onClose, onMarkCollected }: NavigationViewProps) {
-  // mark collected
   const handleMarkCollected = () => {
     onMarkCollected(report.id)
     onClose()
@@ -23,94 +22,109 @@ export function NavigationView({ report, onClose, onMarkCollected }: NavigationV
 
   const [distance, setDistance] = useState<string>("")
   const [eta, setEta] = useState<string>("")
+  const mapRef = useRef<any>(null)
+  const mapInitialized = useRef(false)
 
 
   useEffect(() => {
-  const initMap = async () => {
-    // load leaflet only on client
-    const L = (await import("leaflet")).default
+    const initMap = async () => {
+      // Prevent multiple initializations
+      if (mapInitialized.current) return
+      
+      // load leaflet only on client
+      const L = (await import("leaflet")).default
 
-    // set marker icons
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "/marker-icon-2x.png",
-      iconUrl: "/marker-icon.png",
-      shadowUrl: "/marker-shadow.png",
-    })
+      // set marker icons
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "/marker-icon-2x.png",
+        iconUrl: "/marker-icon.png",
+        shadowUrl: "/marker-shadow.png",
+      })
 
-    // map element
-    const map = L.map("map").setView([report.latitude, report.longitude], 14)
+      // Check if container exists and has _leaflet_id (already initialized)
+      const container = document.getElementById("map")
+      if (container && (container as any)._leaflet_id) {
+        return
+      }
 
-    // tiles
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-    }).addTo(map)
+      // map element
+      mapRef.current = L.map("map").setView([report.latitude, report.longitude], 14)
+      mapInitialized.current = true
 
-    // get current location
-    navigator.geolocation.getCurrentPosition(
-  async (pos) => {
-    // start coords
-    const startLat = pos.coords.latitude
-    const startLng = pos.coords.longitude
+      // tiles
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+      }).addTo(mapRef.current)
 
-    // user marker
-    L.marker([startLat, startLng]).addTo(map).bindPopup("Your Location")
+      // get current location
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          // start coords
+          const startLat = pos.coords.latitude
+          const startLng = pos.coords.longitude
 
-    // destination marker
-    L.marker([report.latitude, report.longitude]).addTo(map).bindPopup("Waste Location")
+          // user marker
+          L.marker([startLat, startLng]).addTo(mapRef.current).bindPopup("Your Location")
 
-    // fetch route
-    const res = await fetch(
-      `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${apiKey}&start=${startLng},${startLat}&end=${report.longitude},${report.latitude}`
-    )
+          // destination marker
+          L.marker([report.latitude, report.longitude]).addTo(mapRef.current).bindPopup("Waste Location")
 
-    const routeData = await res.json()
+          // fetch route
+          const res = await fetch(
+            `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${apiKey}&start=${startLng},${startLat}&end=${report.longitude},${report.latitude}`
+          )
 
-const summary = routeData.features[0].properties.summary
+          const routeData = await res.json()
 
-setDistance((summary.distance / 1000).toFixed(2) + " km")
-setEta(Math.round(summary.duration / 60) + " mins")
+          const summary = routeData.features[0].properties.summary
 
-// geometry may be encoded or plain coords
-let coords: [number, number][] = []
+          setDistance((summary.distance / 1000).toFixed(2) + " km")
+          setEta(Math.round(summary.duration / 60) + " mins")
 
-if (routeData.features[0].geometry.type === "LineString") {
-  // Direct coordinates from API
-  coords = routeData.features[0].geometry.coordinates.map(
-    (c: number[]) => [c[1], c[0]]
-  )
-} else {
-  // Fallback: encoded polyline
-  const raw = polyline.decode(routeData.features[0].geometry)
-  coords = raw.map((c: number[]) => [c[1], c[0]])
-}
+          // geometry may be encoded or plain coords
+          let coords: [number, number][] = []
 
-// draw route
-const routeLine = L.polyline(coords, { color: "green", weight: 5 }).addTo(map)
+          if (routeData.features[0].geometry.type === "LineString") {
+            // Direct coordinates from API
+            coords = routeData.features[0].geometry.coordinates.map(
+              (c: number[]) => [c[1], c[0]]
+            )
+          } else {
+            // Fallback: encoded polyline
+            const raw = polyline.decode(routeData.features[0].geometry)
+            coords = raw.map((c: number[]) => [c[1], c[0]])
+          }
 
-// zoom to route
-map.fitBounds(routeLine.getBounds())
+          // draw route
+          const routeLine = L.polyline(coords, { color: "green", weight: 5 }).addTo(mapRef.current)
 
+          // zoom to route
+          mapRef.current.fitBounds(routeLine.getBounds())
+        },
 
+        () => {
+          const fallbackLat = 18.5204
+          const fallbackLng = 73.8567
 
-  },
+          L.marker([fallbackLat, fallbackLng]).addTo(mapRef.current).bindPopup("Default Location")
+          L.marker([report.latitude, report.longitude]).addTo(mapRef.current)
 
-  () => {
-    const fallbackLat = 18.5204
-    const fallbackLng = 73.8567
+          mapRef.current.setView([report.latitude, report.longitude], 14)
+        }
+      )
 
-    L.marker([fallbackLat, fallbackLng]).addTo(map).bindPopup("Default Location")
-    L.marker([report.latitude, report.longitude]).addTo(map)
+    }
 
-    map.setView([report.latitude, report.longitude], 14)
-  }
-)
+    initMap()
 
-  }
-
-  initMap()
-
-  return () => {}
-}, [report, apiKey])
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+        mapInitialized.current = false
+      }
+    }
+  }, [report, apiKey])
 
 
   return (
@@ -207,8 +221,7 @@ map.fitBounds(routeLine.getBounds())
                     <NavigationIcon className="w-5 h-5 text-[#0F7A20]" />
                     <span className="text-sm font-medium">Distance</span>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">{distance || "Calculating..."}
-</p>
+                  <p className="text-3xl font-bold text-gray-900">{distance || "Calculating..."}</p>
                 </div>
 
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
@@ -216,8 +229,7 @@ map.fitBounds(routeLine.getBounds())
                     <Clock className="w-5 h-5 text-[#0F7A20]" />
                     <span className="text-sm font-medium">Estimated Time</span>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">{eta || "Calculating..."}
-</p>
+                  <p className="text-3xl font-bold text-gray-900">{eta || "Calculating..."}</p>
                 </div>
               </div>
             </div>

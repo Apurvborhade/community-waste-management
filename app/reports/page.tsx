@@ -28,6 +28,13 @@ export default async function ReportsPage() {
     .eq("user_id", user.id)
     .eq("status", "resolved")
 
+  // Get user's open reports count
+  const { count: openCount } = await supabase
+    .from("waste_reports")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "open")
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -64,7 +71,7 @@ export default async function ReportsPage() {
                       {user?.email}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground pt-1">
-                      Contributions: {resolvedCount || 0} resolved
+                      Contributions: {resolvedCount || 0} resolved, {openCount || 0} open
                     </p>
                   </div>
                 </DropdownMenuLabel>
