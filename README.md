@@ -80,6 +80,8 @@ The Community Waste Management System connects citizens, garbage collectors, and
 
 ## System Architecture
 
+![System Architecture](public/architecture.png)
+
 ---
 
 ## Future Enhancements
