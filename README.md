@@ -9,7 +9,7 @@ Traditional reporting systems lack real-time tracking, citizen motivation, and o
 
 ---
 
-## Solution Overview
+## ✅ Solution Overview
 
 The Community Waste Management System connects citizens, garbage collectors, and administrators on a single platform to:
 - Report garbage hotspots with proof
@@ -19,7 +19,7 @@ The Community Waste Management System connects citizens, garbage collectors, and
 
 --- 
 
-## User Roles & Features
+## ⚡User Roles & Features
 
 ### 1️⃣ Normal User (Citizen)
    - Report garbage hotspots with image & description
@@ -78,13 +78,13 @@ The Community Waste Management System connects citizens, garbage collectors, and
   
 ---
 
-## System Architecture
+## 🏗️ System Architecture
 
 ![System Architecture](public/architecture.png)
 
 ---
 
-## Future Enhancements
+## ✨ Future Enhancements
    - AI-based garbage detection in images
    - Carbon footprint & cleanliness metrics
      
