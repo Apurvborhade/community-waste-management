@@ -1,6 +1,7 @@
 import { MapPin, Calendar, Clock, CheckCircle2, Navigation } from 'lucide-react';
 import Image from 'next/image';
-import type { WasteReport } from "../types/waste";import { useEffect, useState } from 'react';
+import type { WasteReport } from "../types/waste";
+import { useEffect, useState } from 'react';
 
 interface ReportsListProps {
   reports: WasteReport[];
@@ -89,7 +90,7 @@ export function ReportsList({
     : reports
 
   return (
-    <div className="space-y-4">
+    <div>
       <h2 className="text-2xl font-semibold text-gray-900 mb-6">
         {filter === "nearest" ? "Nearest Reports" : "Open Reports"} ({sortedReports.length})
       </h2>
@@ -101,93 +102,97 @@ export function ReportsList({
           <p className="text-gray-500 text-sm mt-1">Great work keeping the city clean.</p>
         </div>
       ) : (
-        sortedReports.map((report) => (
-          <div
-            key={report.id}
-            className="bg-white rounded-2xl p-6 shadow-sm border-2 border-gray-100 hover:border-gray-200 transition-all"
-          >
-            {/* Image Gallery */}
-            {(() => {
-              const imageUrls = getImageUrls(report.image_url)
-              return imageUrls.length > 0 && (
-                <div className="mb-4 grid grid-cols-3 gap-2">
-                  {imageUrls.slice(0, 3).map((url, idx) => (
-                    <div key={idx} className="relative h-24 rounded-lg overflow-hidden bg-gray-100">
-                      <Image
-                        src={url}
-                        alt={`Waste report ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        crossOrigin="anonymous"
-                      />
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {sortedReports.map((report) => (
+            <div
+              key={report.id}
+              className="relative flex flex-col h-full bg-white rounded-2xl p-6 shadow-sm border-2 border-gray-100 hover:border-gray-200 transition-all"
+            >
+              {/* Image Gallery */}
+              {(() => {
+                const imageUrls = getImageUrls(report.image_url)
+                return imageUrls.length > 0 && (
+                  <div className="mb-4 relative">
+                    <div className={`grid ${imageUrls.length === 1 ? "grid-cols-1" : imageUrls.length === 2 ? "grid-cols-2" : "grid-cols-3"} gap-2`}>
+                      {imageUrls.slice(0, 3).map((url, idx) => (
+                        <div key={idx} className="relative h-24 rounded-lg overflow-hidden bg-gray-100">
+                          <Image
+                            src={url}
+                            alt={`Waste report ${idx + 1}`}
+                            fill
+                            className="object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {imageUrls.length > 3 && (
-                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                      +{imageUrls.length - 3} more
+                    {imageUrls.length > 3 && (
+                      <div className="absolute right-2 bottom-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full z-10">
+                        +{imageUrls.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4 flex-1">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-lg mb-2 truncate">
+                    {report.description}
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-gray-600 text-sm mb-1">
+                    <MapPin className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{report.location}</span>
+                  </div>
+                  {distances[report.id] && (
+                    <div className="flex items-center gap-3 text-sm mt-2">
+                      <div className="flex items-center gap-1.5 text-blue-600">
+                        <Navigation className="w-4 h-4" />
+                        <span className="font-medium">{distances[report.id].distance}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-blue-600">
+                        <Clock className="w-4 h-4" />
+                        <span className="font-medium">~{distances[report.id].time}</span>
+                      </div>
                     </div>
                   )}
                 </div>
-              )
-            })()}
+                <span className="ml-2 px-3 py-1 border-2 border-[#0F7A20] text-[#0F7A20] rounded-full text-xs font-medium shrink-0">
+                  {report.status}
+                </span>
+              </div>
 
-            {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 text-lg mb-2">
-                  {report.description}
-                </h3>
-                <div className="flex items-center gap-1.5 text-gray-600 text-sm mb-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{report.location}</span>
+              {/* Date/Time */}
+              <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  <span>{report.date}</span>
                 </div>
-                {distances[report.id] && (
-                  <div className="flex items-center gap-3 text-sm mt-2">
-                    <div className="flex items-center gap-1.5 text-blue-600">
-                      <Navigation className="w-4 h-4" />
-                      <span className="font-medium">{distances[report.id].distance}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-blue-600">
-                      <Clock className="w-4 h-4" />
-                      <span className="font-medium">~{distances[report.id].time}</span>
-                    </div>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span>{report.time}</span>
+                </div>
               </div>
-              <span className="px-3 py-1 border-2 border-[#0F7A20] text-[#0F7A20] rounded-full text-xs font-medium">
-                {report.status}
-              </span>
-            </div>
 
-            {/* Date/Time */}
-            <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                <span>{report.date}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
-                <span>{report.time}</span>
+              {/* Actions */}
+              <div className="flex items-center gap-3 mt-auto">
+                <button
+                  onClick={() => onShowRoute(report.id)}
+                  className="flex-1 px-4 py-2.5 bg-[#0F7A20] text-white rounded-full hover:bg-[#0d6a1c] transition-colors font-medium"
+                >
+                  Show Route
+                </button>
+                <button
+                  onClick={() => onMarkCollected(report.id)}
+                  className="flex-1 px-4 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Mark Collected
+                </button>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => onShowRoute(report.id)}
-                className="flex-1 px-4 py-2.5 bg-[#0F7A20] text-white rounded-full hover:bg-[#0d6a1c] transition-colors font-medium"
-              >
-                Show Route
-              </button>
-              <button
-                onClick={() => onMarkCollected(report.id)}
-                className="flex-1 px-4 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
-              >
-                Mark Collected
-              </button>
-            </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   );
