@@ -2,6 +2,8 @@
 
 A web-based platform designed to empower citizens, streamline garbage collection, and support government-led cleanliness initiatives through technology and community participation.
 
+---
+
 ## 🌍 Problem Statement
 
 Improper waste disposal and unreported garbage hotspots lead to health risks, environmental damage, and inefficient waste collection.
