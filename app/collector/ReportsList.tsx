@@ -8,6 +8,7 @@ interface ReportsListProps {
   selectedReportId: string | null;
   onShowRoute: (reportId: string) => void;
   onMarkCollected: (reportId: string) => void;
+  onMarkRejected: (reportId: string) => void;
   filter: "all" | "nearest";
 }
 
@@ -16,6 +17,7 @@ export function ReportsList({
   selectedReportId,
   onShowRoute,
   onMarkCollected,
+  onMarkRejected,
   filter,
 }: ReportsListProps) {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -176,19 +178,29 @@ export function ReportsList({
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-3 mt-auto">
-                <button
-                  onClick={() => onShowRoute(report.id)}
-                  className="flex-1 px-4 py-2.5 bg-[#0F7A20] text-white rounded-full hover:bg-[#0d6a1c] transition-colors font-medium"
-                >
-                  Show Route
-                </button>
-                <button
-                  onClick={() => onMarkCollected(report.id)}
-                  className="flex-1 px-4 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
-                >
-                  Mark Collected
-                </button>
+              <div className="flex flex-col gap-2 mt-auto w-full">
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={() => onShowRoute(report.id)}
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-[#0F7A20] text-white rounded-full hover:bg-[#0d6a1c] transition-colors font-medium"
+                  >
+                    Show Route
+                  </button>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={() => onMarkCollected(report.id)}
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-white border-2 border-green-600 text-green-700 rounded-full hover:bg-green-50 transition-colors font-medium"
+                  >
+                    Mark Collected
+                  </button>
+                  <button
+                    onClick={() => onMarkRejected(report.id)}
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-white border-2 border-red-500 text-red-700 rounded-full hover:bg-red-50 transition-colors font-medium"
+                  >
+                    Mark Rejected
+                  </button>
+                </div>
               </div>
             </div>
           ))}

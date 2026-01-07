@@ -70,20 +70,37 @@ export default function CollectorPage() {
 
   // mark collected
   const handleMarkCollected = async (reportId: string) => {
-  const { error } = await supabase
-    .from("waste_reports")
-    .update({ status: "resolved" })
-    .eq("id", reportId)
+    const { error } = await supabase
+      .from("waste_reports")
+      .update({ status: "resolved" })
+      .eq("id", reportId)
 
-  if (error) {
-    console.error("Error updating report:", error)
-    alert("Failed to mark as collected: " + error.message)
-  } else {
-    console.log("Successfully marked report as resolved")
-    // Remove from open reports list since it's now resolved
-    setReports(prev => prev.filter(r => r.id !== reportId))
+    if (error) {
+      console.error("Error updating report:", error)
+      alert("Failed to mark as collected: " + error.message)
+    } else {
+      console.log("Successfully marked report as resolved")
+      // Remove from open reports list since it's now resolved
+      setReports(prev => prev.filter(r => r.id !== reportId))
+    }
   }
-}
+
+  // Similar function for marking as rejected
+  const handleMarkRejected = async (reportId: string) => {
+    const { error } = await supabase
+      .from("waste_reports")
+      .update({ status: "rejected" })
+      .eq("id", reportId)
+
+    if (error) {
+      console.error("Error updating report:", error)
+      alert("Failed to mark as rejected: " + error.message)
+    } else {
+      console.log("Successfully marked report as rejected")
+      // Remove from open reports list since it's now rejected
+      setReports(prev => prev.filter(r => r.id !== reportId))
+    }
+  }
 
 
   return (
@@ -137,6 +154,7 @@ export default function CollectorPage() {
               selectedReportId={selectedReportId}
               onShowRoute={handleShowRoute}
               onMarkCollected={handleMarkCollected}
+              onMarkRejected={handleMarkRejected}
               filter={filter}
             />
           </>
