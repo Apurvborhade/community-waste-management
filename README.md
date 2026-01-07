@@ -82,7 +82,7 @@ The Community Waste Management System connects citizens, garbage collectors, and
 
 ---
 
-## 🚀 Future Enhancements
+## Future Enhancements
    - AI-based garbage detection in images
    - Carbon footprint & cleanliness metrics
      
