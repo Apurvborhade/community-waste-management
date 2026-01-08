@@ -2,6 +2,8 @@
 
 A web-based platform designed to empower citizens, streamline garbage collection, and support government-led cleanliness initiatives through technology and community participation.
 
+https://community-waste-management.vercel.app/reports
+
 ## 🌍 Problem Statement
 
 Improper waste disposal and unreported garbage hotspots lead to health risks, environmental damage, and inefficient waste collection.
